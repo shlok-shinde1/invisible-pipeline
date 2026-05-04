@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from database import Base, engine, get_db
 from models.db_models import RepoScan, StoredFinding
+from services.pr_commeter import format_pr_comment
 from services.github_app_auth import get_installation_token
 from services.github_client import GitHubClient
 from services.graph_builder import build_graph
@@ -249,6 +250,20 @@ async def github_webhook(request: Request, db: Session = Depends(get_db)):
                 graph = analyze_logs(graph, logs)
 
                 save_scan(db, repo, run_id, graph)
+
+    head_sha = payload["workflow_run"].get("head_sha")
+    comment_body = format_pr_comment(repo, graph)
+
+    if comment_body and head_sha:
+        try:
+            prs = await github.get_pull_requests_for_commit(owner, repo_name, head_sha)
+
+            if prs:
+                pr_number = prs[0]["number"]
+                await github.create_pr_comment(owner, repo_name, pr_number, comment_body)
+                print(f"Commented on PR #{pr_number}")
+        except Exception as e:
+            print("PR comment error:", e)
 
                 print(f"Auto-scanned {repo}")
 

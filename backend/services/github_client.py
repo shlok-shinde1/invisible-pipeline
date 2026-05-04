@@ -64,3 +64,29 @@ class GitHubClient:
                         })
 
             return logs
+
+    async def get_pull_requests_for_commit(self, owner: str, repo: str, sha: str):
+        url = f"https://api.github.com/repos/{owner}/{repo}/commits/{sha}/pulls"
+
+        headers = {
+            **self.headers,
+            "Accept": "application/vnd.github+json",
+        }
+
+        async with httpx.AsyncClient() as client:
+            res = await client.get(url, headers=headers)
+            res.raise_for_status()
+            return res.json()
+
+
+    async def create_pr_comment(self, owner: str, repo: str, pr_number: int, body: str):
+        url = f"https://api.github.com/repos/{owner}/{repo}/issues/{pr_number}/comments"
+
+        async with httpx.AsyncClient() as client:
+            res = await client.post(
+                url,
+                headers=self.headers,
+                json={"body": body},
+            )
+            res.raise_for_status()
+            return res.json()
