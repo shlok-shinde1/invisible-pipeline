@@ -1,5 +1,6 @@
 import json
 
+from fastapi import Request
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -197,3 +198,56 @@ def get_saved_scan_graph(scan_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Saved graph not found")
 
     return json.loads(scan.graph_json)
+
+@app.post("/github/webhook")
+async def github_webhook(request: Request, db: Session = Depends(get_db)):
+    payload = await request.json()
+    event = request.headers.get("X-GitHub-Event")
+
+    if event == "workflow_run":
+        action = payload.get("action")
+
+        # only scan when completed
+        if action == "completed":
+            repo = payload["repository"]["full_name"]
+            run_id = payload["workflow_run"]["id"]
+
+            owner, repo_name = repo.split("/")
+
+            try:
+                github = GitHubClient()
+
+                jobs = await github.get_jobs_for_run(owner, repo_name, run_id)
+                graph = build_graph(jobs)
+
+                # workflows
+                try:
+                    contents = await github.get_repo_contents(owner, repo_name, ".github/workflows")
+                except:
+                    contents = []
+
+                workflows = []
+                for item in contents:
+                    if item["name"].endswith((".yml", ".yaml")):
+                        yaml_text = await github.get_file_text(item["download_url"])
+                        parsed = parse_workflow_yaml(item["name"], yaml_text)
+                        workflows.extend(parsed)
+
+                # logs
+                try:
+                    logs = await github.get_workflow_logs(owner, repo_name, run_id)
+                except:
+                    logs = []
+
+                graph = analyze_graph(graph)
+                graph = diff_pipelines(graph, workflows)
+                graph = analyze_logs(graph, logs)
+
+                save_scan(db, repo, run_id, graph)
+
+                return {"status": "scanned"}
+
+            except Exception as e:
+                return {"error": str(e)}
+
+    return {"status": "ignored"}
