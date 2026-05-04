@@ -1,0 +1,212 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+}
+
+.page {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+}
+
+.sidebar {
+  width: 360px;
+  padding: 24px;
+  background: #111827;
+  color: white;
+  overflow-y: auto;
+}
+
+.sidebar h1 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.sidebar p {
+  color: #d1d5db;
+}
+
+.sidebar h2 {
+  margin-top: 32px;
+}
+
+.finding {
+  background: white;
+  color: #111827;
+  padding: 14px;
+  border-radius: 12px;
+  margin-bottom: 12px;
+}
+
+.finding:hover {
+  transform: scale(1.02);
+  transition: 0.15s ease;
+}
+
+.finding span {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.finding.medium {
+  border-left: 6px solid #f59e0b;
+}
+
+.finding.high {
+  border-left: 6px solid #ef4444;
+}
+
+.finding.low {
+  border-left: 6px solid #22c55e;
+}
+
+.graph {
+  flex: 1;
+  height: 100vh;
+}
+
+.scan-card {
+  background: #1f2937;
+  color: white;
+  padding: 14px;
+  border-radius: 12px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  border: 1px solid #374151;
+}
+
+.scan-card:hover {
+  background: #374151;
+  transform: scale(1.02);
+  transition: 0.15s ease;
+}
+
+.scan-card p {
+  margin: 6px 0;
+  color: #d1d5db;
+}
+
+.scan-card small {
+  color: #9ca3af;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-size: 18px;
+}
+
+.scan-input {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.scan-input input {
+  flex: 1;
+  padding: 8px;
+  border-radius: 8px;
+  border: none;
+}
+
+.scan-input button {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: none;
+  background: #2563eb;
+  color: white;
+  cursor: pointer;
+}
+
+.scan-input button:hover {
+  background: #1d4ed8;
+}
+
+.risk-breakdown {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.risk-badge {
+  font-size: 11px;
+  text-transform: capitalize;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: #374151;
+  color: #e5e7eb;
+}
+
+.risk-badge.unpinned_actions,
+.risk-badge.secrets,
+.risk-badge.dangerous_commands {
+  background: #7f1d1d;
+  color: #fecaca;
+}
+
+.risk-badge.third_party_actions,
+.risk-badge.external_calls {
+  background: #78350f;
+  color: #fde68a;
+}
+
+.risk-badge.dependency_installs {
+  background: #064e3b;
+  color: #a7f3d0;
+}
+
+.node-inspector {
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 14px;
+  padding: 14px;
+  margin: 18px 0;
+}
+
+.node-inspector h2,
+.node-inspector h3 {
+  margin-bottom: 10px;
+}
+
+.node-inspector strong {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.fix-box {
+  background: #020617;
+  color: #e2e8f0;
+  padding: 10px;
+  border-radius: 10px;
+  margin-top: 8px;
+  font-size: 12px;
+  white-space: pre-wrap;
+  border: 1px solid #334155;
+}
+
+.fix-card {
+  margin-top: 8px;
+}
+
+.copy-fix-button {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 8px;
+  background: #2563eb;
+  color: white;
+  cursor: pointer;
+}
+
+.copy-fix-button:hover {
+  background: #1d4ed8;
+}

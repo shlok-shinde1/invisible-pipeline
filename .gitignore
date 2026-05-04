@@ -1,0 +1,8 @@
+backend/.env
+.env
+backend/.env
+.env
+backend/venv/
+backend/services/venv/
+frontend/node_modules/
+backend/invisible_pipeline.db
