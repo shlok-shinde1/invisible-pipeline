@@ -1,13 +1,12 @@
 import json
 
-from fastapi import Request
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
 from database import Base, engine, get_db
 from models.db_models import RepoScan, StoredFinding
-from services.pr_commeter import format_pr_comment
+from services.pr_commenter import format_pr_comment
 from services.github_app_auth import get_installation_token
 from services.github_client import GitHubClient
 from services.graph_builder import build_graph
@@ -48,7 +47,6 @@ async def get_runs(owner: str, repo: str):
 async def get_jobs(owner: str, repo: str):
     try:
         github = GitHubClient()
-
         runs = await github.get_completed_workflow_runs(owner, repo)
 
         if not runs.get("workflow_runs"):
@@ -72,7 +70,6 @@ async def get_jobs(owner: str, repo: str):
 async def get_pipeline_graph(owner: str, repo: str, db: Session = Depends(get_db)):
     try:
         github = GitHubClient()
-
         runs = await github.get_completed_workflow_runs(owner, repo)
 
         if not runs.get("workflow_runs"):
@@ -201,7 +198,6 @@ def get_saved_scan_graph(scan_id: int, db: Session = Depends(get_db)):
 
     return json.loads(scan.graph_json)
 
-from fastapi import Request
 
 @app.post("/github/webhook")
 async def github_webhook(request: Request, db: Session = Depends(get_db)):
@@ -211,65 +207,66 @@ async def github_webhook(request: Request, db: Session = Depends(get_db)):
 
         print("WEBHOOK HIT:", event)
 
-        if event == "workflow_run":
-            action = payload.get("action")
+        if event != "workflow_run":
+            return {"status": "ignored", "event": event}
 
-            if action == "completed":
-                repo = payload["repository"]["full_name"]
-                run_id = payload["workflow_run"]["id"]
+        action = payload.get("action")
 
-                owner, repo_name = repo.split("/")
+        if action != "completed":
+            return {"status": "ignored", "event": event, "action": action}
 
-                installation_id = payload["installation"]["id"]
-                installation_token = await get_installation_token(installation_id)
-                github = GitHubClient(token=installation_token)
+        repo = payload["repository"]["full_name"]
+        run_id = payload["workflow_run"]["id"]
+        owner, repo_name = repo.split("/")
 
-                jobs = await github.get_jobs_for_run(owner, repo_name, run_id)
-                graph = build_graph(jobs)
+        installation_id = payload["installation"]["id"]
+        installation_token = await get_installation_token(installation_id)
+        github = GitHubClient(token=installation_token)
 
-                try:
-                    contents = await github.get_repo_contents(owner, repo_name, ".github/workflows")
-                except Exception:
-                    contents = []
+        jobs = await github.get_jobs_for_run(owner, repo_name, run_id)
+        graph = build_graph(jobs)
 
-                workflows = []
-
-                for item in contents:
-                    if item["name"].endswith((".yml", ".yaml")):
-                        yaml_text = await github.get_file_text(item["download_url"])
-                        parsed = parse_workflow_yaml(item["name"], yaml_text)
-                        workflows.extend(parsed)
-
-                try:
-                    logs = await github.get_workflow_logs(owner, repo_name, run_id)
-                except Exception:
-                    logs = []
-
-                graph = analyze_graph(graph)
-                graph = diff_pipelines(graph, workflows)
-                graph = analyze_logs(graph, logs)
-
-                save_scan(db, repo, run_id, graph)
-
-    head_sha = payload["workflow_run"].get("head_sha")
-    comment_body = format_pr_comment(repo, graph)
-
-    if comment_body and head_sha:
         try:
-            prs = await github.get_pull_requests_for_commit(owner, repo_name, head_sha)
+            contents = await github.get_repo_contents(owner, repo_name, ".github/workflows")
+        except Exception:
+            contents = []
 
-            if prs:
-                pr_number = prs[0]["number"]
-                await github.create_pr_comment(owner, repo_name, pr_number, comment_body)
-                print(f"Commented on PR #{pr_number}")
-        except Exception as e:
-            print("PR comment error:", e)
+        workflows = []
 
-                print(f"Auto-scanned {repo}")
+        for item in contents:
+            if item["name"].endswith((".yml", ".yaml")):
+                yaml_text = await github.get_file_text(item["download_url"])
+                parsed = parse_workflow_yaml(item["name"], yaml_text)
+                workflows.extend(parsed)
 
-                return {"status": "scanned", "repo": repo}
+        try:
+            logs = await github.get_workflow_logs(owner, repo_name, run_id)
+        except Exception:
+            logs = []
 
-        return {"status": "ignored", "event": event}
+        graph = analyze_graph(graph)
+        graph = diff_pipelines(graph, workflows)
+        graph = analyze_logs(graph, logs)
+
+        save_scan(db, repo, run_id, graph)
+
+        head_sha = payload["workflow_run"].get("head_sha")
+        comment_body = format_pr_comment(repo, graph)
+
+        if comment_body and head_sha:
+            try:
+                prs = await github.get_pull_requests_for_commit(owner, repo_name, head_sha)
+
+                if prs:
+                    pr_number = prs[0]["number"]
+                    await github.create_pr_comment(owner, repo_name, pr_number, comment_body)
+                    print(f"Commented on PR #{pr_number}")
+            except Exception as e:
+                print("PR comment error:", e)
+
+        print(f"Auto-scanned {repo}")
+
+        return {"status": "scanned", "repo": repo}
 
     except Exception as e:
         print("WEBHOOK ERROR:", str(e))
