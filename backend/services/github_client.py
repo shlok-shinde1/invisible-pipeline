@@ -6,7 +6,7 @@ from config import GITHUB_TOKEN
 class GitHubClient:
     def __init__(self):
         self.headers = {
-            "Authorization": f"Bearer {GITHUB_TOKEN}",
+            "Authorization": f"Bearer {token or GITHUB_TOKEN}",
             "Accept": "application/vnd.github+json",
         }
 

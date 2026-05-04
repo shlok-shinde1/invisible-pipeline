@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from database import Base, engine, get_db
 from models.db_models import RepoScan, StoredFinding
+from services.github_app_auth import get_installation_token
 from services.github_client import GitHubClient
 from services.graph_builder import build_graph
 from services.risk_analyzer import analyze_graph
@@ -218,7 +219,9 @@ async def github_webhook(request: Request, db: Session = Depends(get_db)):
 
                 owner, repo_name = repo.split("/")
 
-                github = GitHubClient()
+                installation_id = payload["installation"]["id"]
+                installation_token = await get_installation_token(installation_id)
+                github = GitHubClient(token=installation_token)
 
                 jobs = await github.get_jobs_for_run(owner, repo_name, run_id)
                 graph = build_graph(jobs)
