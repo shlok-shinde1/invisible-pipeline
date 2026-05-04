@@ -3,7 +3,9 @@ import { ReactFlow, Background, Controls } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import "./App.css";
 
-const API_BASE = "http://127.0.0.1:8000";
+const API_BASE = import.meta.env.VITE_API_BASE;
+
+console.log("API_BASE:", API_BASE);
 
 function getNodeColor(risk) {
   if (risk === "high") return "#fee2e2";
